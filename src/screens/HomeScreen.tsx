@@ -20,13 +20,17 @@ const HomeScreen: React.FC = () => {
     setIsLoading(true);
     try {
       const reader = new FileReader();
-      reader.onloadend = async () => {
-        const base64Content = (reader.result as string).split(',')[1];
-        const result = await analyzeCropDisease(base64Content, file.type);
-        navigate('/result', { state: { result, imageUri: reader.result } });
-      };
-      reader.readAsDataURL(file);
+      const resultPromise = new Promise<string>((resolve) => {
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
+      });
+
+      const imageDataUri = await resultPromise;
+      const base64Content = imageDataUri.split(',')[1];
+      const result = await analyzeCropDisease(base64Content, file.type);
+      navigate('/result', { state: { result, imageUri: imageDataUri } });
     } catch (error: any) {
+      console.error(error);
       alert(error.message || 'Error analyzing image');
     } finally {
       setIsLoading(false);

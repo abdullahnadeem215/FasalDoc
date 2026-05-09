@@ -17,6 +17,17 @@ const AlertsScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  const [filteredAlerts, setFilteredAlerts] = useState<Alert[]>([]);
+  const [activeFilter, setActiveFilter] = useState<string>('all');
+
+  const filters = [
+    { id: 'all', ur: 'سب', en: 'All' },
+    { id: 'pest', ur: 'کیڑے', en: 'Pests' },
+    { id: 'disease', ur: 'بیماری', en: 'Diseases' },
+    { id: 'climate_migration', ur: 'ہجرت', en: 'Migration' },
+    { id: 'weather', ur: 'موسم', en: 'Weather' },
+  ];
+
   const loadData = async (isManual = false) => {
     if (isManual) setRefreshing(true);
     else setLoading(true);
@@ -32,7 +43,6 @@ const AlertsScreen: React.FC = () => {
       const activeAlerts = await getAlertsForDistrict(loc.district);
       const historyAlerts = await getAlertHistory();
       
-      // Combine and unique by ID, prioritising active ones
       const combined = [...activeAlerts];
       historyAlerts.forEach(h => {
         if (!combined.find(a => a.id === h.id)) {
@@ -40,11 +50,11 @@ const AlertsScreen: React.FC = () => {
         }
       });
 
-      // Sort by severity (Severe first)
       const severityMap = { Severe: 0, High: 1, Medium: 2, Low: 3 };
       combined.sort((a, b) => severityMap[a.severity] - severityMap[b.severity]);
       
       setAlerts(combined);
+      applyFilter(combined, activeFilter);
     } catch (error) {
       console.error("Failed to load alerts:", error);
     } finally {
@@ -52,6 +62,21 @@ const AlertsScreen: React.FC = () => {
       setRefreshing(false);
     }
   };
+
+  const applyFilter = (data: Alert[], filterId: string) => {
+    if (filterId === 'all') {
+      setFilteredAlerts(data);
+    } else if (filterId === 'disease') {
+      // Small logic tweak to include both 'disease' and sometimes 'pest' if relevant
+      setFilteredAlerts(data.filter(a => a.type === 'disease'));
+    } else {
+      setFilteredAlerts(data.filter(a => a.type === filterId));
+    }
+  };
+
+  useEffect(() => {
+    applyFilter(alerts, activeFilter);
+  }, [activeFilter, alerts]);
 
   useEffect(() => {
     loadData();
@@ -62,7 +87,7 @@ const AlertsScreen: React.FC = () => {
   return (
     <div className="p-6 pb-24 min-h-screen">
       {/* Header */}
-      <header className="flex items-center justify-between mb-8">
+      <header className="flex items-center justify-between mb-6">
         <div>
           <UrduText className="text-3xl font-bold text-brand-primary m-0">
             {isUrdu ? 'فصل الرٹ' : 'Crop Alerts'}
@@ -88,14 +113,34 @@ const AlertsScreen: React.FC = () => {
         </button>
       </header>
 
+      {/* Filter Chips */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-2 no-scrollbar">
+        {filters.map((filter) => (
+          <button
+            key={filter.id}
+            onClick={() => setActiveFilter(filter.id)}
+            className={cn(
+              "px-4 py-2 rounded-xl whitespace-nowrap text-xs font-bold transition-all active:scale-95",
+              activeFilter === filter.id 
+                ? "bg-brand-primary text-white shadow-md" 
+                : "bg-white text-brand-primary border border-brand-primary/10"
+            )}
+          >
+            <UrduText className="m-0 !text-inherit">
+              {isUrdu ? filter.ur : filter.en}
+            </UrduText>
+          </button>
+        ))}
+      </div>
+
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 opacity-50">
           <div className="w-12 h-12 border-4 border-brand-primary border-t-transparent rounded-full animate-spin mb-4" />
           <UrduText>لوڈنگ ہو رہی ہے...</UrduText>
         </div>
-      ) : alerts.length > 0 ? (
+      ) : filteredAlerts.length > 0 ? (
         <div className="space-y-4">
-          {alerts.map((alert) => (
+          {filteredAlerts.map((alert) => (
             <AlertCard key={alert.id} alert={alert} />
           ))}
         </div>
@@ -113,8 +158,12 @@ const AlertsScreen: React.FC = () => {
           </UrduText>
           <UrduText className="text-gray-500 max-w-[200px]">
             {isUrdu 
-              ? 'آپ کے علاقے میں فی الحال کوئی بیماری یا کیڑوں کا خطرہ نہیں ہے۔' 
-              : 'Your area is currently safe from major pests and diseases.'}
+              ? (activeFilter === 'all' 
+                  ? 'آپ کے علاقے میں فی الحال کوئی بیماری یا کیڑوں کا خطرہ نہیں ہے۔' 
+                  : `آپ کے علاقے میں فی الحال کوئی ${filters.find(f => f.id === activeFilter)?.ur} الرٹ نہیں ہے۔`)
+              : (activeFilter === 'all'
+                  ? 'Your area is currently safe from major pests and diseases.'
+                  : `No ${filters.find(f => f.id === activeFilter)?.en} alerts in your area.`)}
           </UrduText>
         </motion.div>
       )}

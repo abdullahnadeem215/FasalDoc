@@ -29,6 +29,17 @@ export const AlertCard: React.FC<AlertCardProps> = ({ alert }) => {
     Low: 'border-success',
   };
 
+  const getTypeIcon = (type: Alert['type']) => {
+    switch (type) {
+      case 'pest': return '🐛';
+      case 'disease': return '🦠';
+      case 'locust': return '🦗';
+      case 'weather': return '🌦️';
+      case 'climate_migration': return '🌊';
+      default: return '⚠️';
+    }
+  };
+
   return (
     <motion.div 
       layout
@@ -41,6 +52,7 @@ export const AlertCard: React.FC<AlertCardProps> = ({ alert }) => {
         {/* Header Row */}
         <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
           <div className="flex items-center gap-2">
+            <span className="text-xl" title={alert.type}>{getTypeIcon(alert.type)}</span>
             <span className={cn(
               "px-3 py-1 rounded-full text-[10px] font-bold text-white uppercase tracking-wider",
               severityColors[alert.severity]

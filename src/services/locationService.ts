@@ -81,12 +81,12 @@ export async function getUserDistrict(): Promise<UserLocation> {
     localStorage.setItem(CACHE_KEY, JSON.stringify(locationData));
     return locationData;
   } catch (error) {
-    console.warn("Failed to get fresh location, using cache...");
     const cached = localStorage.getItem(CACHE_KEY);
     if (cached) {
       return JSON.parse(cached);
     }
     
+    // Default fallback coordinates for Faisalabad
     return {
       latitude: 31.4504,
       longitude: 73.1350,

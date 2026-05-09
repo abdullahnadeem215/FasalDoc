@@ -11,7 +11,10 @@ export async function fetchAlerts(): Promise<Alert[]> {
     const response = await axios.get(ALERTS_URL, { timeout: 5000 });
     return response.data;
   } catch (error) {
-    console.warn("Remote alerts fetch failed, using mock data:", error);
+    // Only log if it's not a 404 (which is expected until the user sets up the repo)
+    if (axios.isAxiosError(error) && error.response?.status !== 404) {
+      console.warn("Remote alerts fetch failed:", error.message);
+    }
     return MOCK_ALERTS;
   }
 }

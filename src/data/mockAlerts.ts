@@ -1,6 +1,6 @@
 export interface Alert {
   id: string;
-  type: 'pest' | 'weather' | 'locust' | 'disease';
+  type: 'pest' | 'weather' | 'locust' | 'disease' | 'climate_migration';
   severity: 'Low' | 'Medium' | 'High' | 'Severe';
   crop: string;
   crop_ur: string;
@@ -132,5 +132,88 @@ export const MOCK_ALERTS: Alert[] = [
     valid_from: "2026-03-01",
     valid_until: "2026-07-31",
     source: "FAO Pakistan & NLCC"
+  },
+  {
+    id: "alert_005",
+    type: "climate_migration",
+    severity: "Severe",
+    crop: "all",
+    crop_ur: "تمام فصلیں",
+    title_ur: "سیلاب کی پیشن گوئی – دریائے سندھ میں طغیانی",
+    title_en: "Flood Warning – Indus River Swelling",
+    description_ur: "اگلے 48 گھنٹوں میں دریائے سندھ میں شدید طغیانی کا امکان۔ ضلع سکھر، شکارپور اور جیکب آباد کے نشیبی علاقے زیر آب آ سکتے ہیں۔",
+    description_en: "Severe flooding expected in Indus River within 48 hours. Low‑lying areas of Sukkur, Shikarpur, Jacobabad may be inundated.",
+    precautions_ur: [
+      "فوری طور پر خاندان اور مویشیوں کو اونچی جگہ منتقل کریں",
+      "اہم دستاویزات اور خوراک کا ذخیرہ ساتھ رکھیں",
+      "ضلعی انتظامیہ کی ہدایات پر عمل کریں",
+      "ریسکیو ہیلپ لائن 1122 پر رابطہ کریں"
+    ],
+    precautions_en: [
+      "Move family and livestock to higher ground immediately",
+      "Keep important documents and food supplies",
+      "Follow district administration instructions",
+      "Call rescue helpline 1122"
+    ],
+    affected_districts: ["Sukkur", "Shikarpur", "Jacobabad", "Larkana", "Qambar", "Kashmore"],
+    valid_from: "2026-07-15",
+    valid_until: "2026-07-25",
+    source: "Pakistan Meteorological Department / NDMA"
+  },
+  {
+    id: "alert_006",
+    type: "climate_migration",
+    severity: "Severe",
+    crop: "all",
+    crop_ur: "تمام فصلیں",
+    title_ur: "شدید خشک سالی – تھرپارکر میں پانی کا بحران",
+    title_en: "Severe Drought – Water Crisis in Tharparkar",
+    description_ur: "تھرپارکر اور آس پاس کے اضلاع میں بارش نہ ہونے کے باعث شدید خشک سالی ہے۔ چارہ اور پانی ختم ہو رہا ہے۔",
+    description_en: "Severe drought due to lack of rainfall in Tharparkar and surrounding districts. Fodder and water are depleting.",
+    precautions_ur: [
+      "مویشیوں کو قریبی ریسکیو مراکز میں منتقل کریں",
+      "پانی کی بچت کریں اور ذخیرہ اندوزی سے گریز کریں",
+      "ضلع انتظامیہ سے چارے کی فراہمی کی درخواست کریں",
+      "ہجرت کی صورت میں محفوظ مقامات کی نشاندہی کریں"
+    ],
+    precautions_en: [
+      "Move livestock to nearby rescue centers",
+      "Conserve water and avoid hoarding",
+      "Request fodder supply from district administration",
+      "Identify safe locations if migration becomes necessary"
+    ],
+    affected_districts: ["Tharparkar", "Umerkot", "Mirpur Khas", "Sanghar", "Badin"],
+    valid_from: "2026-05-01",
+    valid_until: "2026-08-31",
+    source: "Pakistan Drought Monitoring Centre"
+  },
+  {
+    id: "alert_007",
+    type: "climate_migration",
+    severity: "High",
+    crop: "all",
+    crop_ur: "تمام فصلیں",
+    title_ur: "شدید گرمی کی لہر – درجہ حرارت 48°C تک",
+    title_en: "Extreme Heatwave – Temperature up to 48°C",
+    description_ur: "وسطی اور جنوبی پنجاب میں اگلے پانچ دن شدید گرمی کی لہر رہے گی۔ فصلوں اور مویشیوں کو شدید خطرہ ہے۔",
+    description_en: "Extreme heatwave expected in central and southern Punjab for the next five days. Crops and livestock are at high risk.",
+    precautions_ur: [
+      "جانوروں کو دن میں سایہ دار جگہ رکھیں اور پانی کی کمی نہ ہونے دیں",
+      "فصلوں پر پانی کے چھڑکاؤ سے درجہ حرارت کم کریں",
+      "صبح 10 بجے سے شام 4 بجے تک کھیت میں نہ جائیں",
+      "ہیٹ اسٹروک کی علامات پر فوری ڈاکٹر سے رجوع کریں",
+      "اگر ممکن ہو تو جانوروں کو ٹھنڈے علاقوں میں منتقل کریں"
+    ],
+    precautions_en: [
+      "Keep animals in shade and provide adequate water",
+      "Sprinkle water on crops to reduce temperature",
+      "Avoid fields between 10 AM and 4 PM",
+      "Seek immediate medical help for heatstroke symptoms",
+      "If possible, move livestock to cooler areas"
+    ],
+    affected_districts: ["Multan", "Bahawalpur", "Rahim Yar Khan", "Dera Ghazi Khan", "Muzaffargarh", "Lodhran"],
+    valid_from: "2026-06-01",
+    valid_until: "2026-06-10",
+    source: "Pakistan Meteorological Department"
   }
 ];
