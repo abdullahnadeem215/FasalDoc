@@ -1,81 +1,51 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Wheat } from 'lucide-react';
+import { View, StyleSheet, Modal, ActivityIndicator, Text } from 'react-native';
 import { UrduText } from './UrduText';
 
 interface LoadingOverlayProps {
-  isVisible: boolean;
+  visible: boolean;
   message?: string;
+  isUrdu?: boolean;
 }
 
-export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ 
-  isVisible, 
-  message = "بیماری کی پہچان ہو رہی ہے..." 
-}) => {
+export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ visible, message, isUrdu = true }) => {
   return (
-    <AnimatePresence>
-      {isVisible && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[100] bg-brand-background/90 flex flex-col items-center justify-center p-6 backdrop-blur-sm"
-        >
-          <div className="relative">
-            <motion.div
-              animate={{ 
-                rotate: 360,
-                scale: [1, 1.05, 1]
-              }}
-              transition={{ 
-                rotate: { repeat: Infinity, duration: 3, ease: "linear" },
-                scale: { repeat: Infinity, duration: 2, ease: "easeInOut" }
-              }}
-              className="w-24 h-24 bg-brand-accent rounded-full flex items-center justify-center shadow-[0_0_50px_rgba(45,198,83,0.3)]"
-            >
-              <Wheat className="w-12 h-12 text-brand-background" />
-            </motion.div>
-            
-            <motion.div
-              animate={{ opacity: [0.2, 0.5, 0.2] }}
-              transition={{ repeat: Infinity, duration: 1.5 }}
-              className="absolute -inset-4 border-2 border-brand-accent rounded-full"
-            />
-          </div>
-
-          <motion.div 
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            className="mt-8 text-center"
-          >
-            <UrduText className="text-2xl font-bold text-brand-cream leading-normal">
-              {message}
-            </UrduText>
-            <p className="text-brand-cream/60 mt-2 font-mono text-xs uppercase tracking-[0.2em]">
-              Analyzing with Gemini AI
-            </p>
-          </motion.div>
-
-          <div className="absolute bottom-12 flex gap-1">
-            {[0, 1, 2].map((i) => (
-              <motion.div
-                key={i}
-                animate={{ 
-                  scale: [1, 1.5, 1],
-                  opacity: [0.3, 1, 0.3]
-                }}
-                transition={{ 
-                  repeat: Infinity, 
-                  duration: 1, 
-                  delay: i * 0.2 
-                }}
-                className="w-2 h-2 bg-brand-accent rounded-full"
-              />
-            ))}
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <Modal transparent visible={visible} animationType="fade">
+      <View style={styles.container}>
+        <View style={styles.card}>
+          <ActivityIndicator size="large" color="#1B4332" />
+          <UrduText style={styles.text}>
+            {message || (isUrdu ? 'تجزیہ کیا جا رہا ہے...' : 'Analyzing...')}
+          </UrduText>
+        </View>
+      </View>
+    </Modal>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  card: {
+    backgroundColor: 'white',
+    padding: 30,
+    borderRadius: 20,
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  text: {
+    marginTop: 15,
+    color: '#1B4332',
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+});

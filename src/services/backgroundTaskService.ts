@@ -1,35 +1,46 @@
+import BackgroundFetch from 'react-native-background-fetch';
 import { getUserDistrict } from './locationService';
-import { getAlertsForDistrict, isAlertAlreadyShown, markAlertAsShown, saveAlertToHistory } from './alertService';
+import { getAlertsForDistrict, markAlertAsShown, saveAlertToHistory } from './alertService';
 import { fireAlertNotification } from './notificationService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export async function runBackgroundAlertCheck() {
-  console.log("Running alert check...");
+  console.log("[BackgroundFetch] Running alert check...");
   try {
     const location = await getUserDistrict();
     const alerts = await getAlertsForDistrict(location.district);
     
+    const shownData = await AsyncStorage.getItem('shown_alerts_ids');
+    const shownIds = shownData ? JSON.parse(shownData) : [];
+
     for (const alert of alerts) {
-      const alreadyShown = await isAlertAlreadyShown(alert.id);
-      if (!alreadyShown) {
+      if (!shownIds.includes(alert.id)) {
         await fireAlertNotification(alert);
-        await markAlertAsShown(alert.id);
+        shownIds.push(alert.id);
         await saveAlertToHistory(alert);
       }
     }
+    await AsyncStorage.setItem('shown_alerts_ids', JSON.stringify(shownIds));
   } catch (error) {
-    console.error("Alert check failed:", error);
+    console.error("[BackgroundFetch] Error:", error);
   }
 }
 
 export async function registerBackgroundAlertTask() {
-  // On web, we simulate background tasks by running them when the app is active.
-  // We check once on startup and then every 15 minutes (since 6 hours is too long for a web session).
-  
-  // Initial check
-  runBackgroundAlertCheck();
+  const status = await BackgroundFetch.configure({
+    minimumFetchInterval: 15, // 15 minutes
+    stopOnTerminate: false,
+    enableHeadless: true,
+    startOnBoot: true,
+    requiredNetworkType: BackgroundFetch.NETWORK_TYPE_ANY,
+  }, async (taskId) => {
+    console.log("[BackgroundFetch] TaskId:", taskId);
+    await runBackgroundAlertCheck();
+    BackgroundFetch.finish(taskId);
+  }, async (taskId) => {
+    console.warn("[BackgroundFetch] TIMEOUT:", taskId);
+    BackgroundFetch.finish(taskId);
+  });
 
-  // Periodic check (every 15 minutes while app is open)
-  setInterval(() => {
-    runBackgroundAlertCheck();
-  }, 15 * 60 * 1000);
+  console.log("[BackgroundFetch] Status:", status);
 }

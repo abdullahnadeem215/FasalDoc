@@ -1,11 +1,8 @@
 {
-  "name": "FasalDoc",
-  "description": "AI-powered crop disease detector specializing in Pakistani agriculture. Identify diseases in wheat, cotton, rice, and more using Gemini vision.",
+  "name": "FasalDoc Mobile",
+  "description": "Professional crop disease detection for Pakistani farmers. Native React Native app with real-time alerts, location-based pest tracking, and Gemini AI analysis.",
   "requestFramePermissions": [
-    "camera"
-  ],
-  "majorCapabilities": [
-    "Image Recognition",
-    "Multilingual support (Urdu/English)"
+    "camera",
+    "microphone"
   ]
 }

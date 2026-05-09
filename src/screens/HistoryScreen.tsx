@@ -1,111 +1,213 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Trash2, History as HistoryIcon, Search, AlertCircle } from 'lucide-react';
+import { 
+  View, 
+  StyleSheet, 
+  FlatList, 
+  Image, 
+  TouchableOpacity, 
+  SafeAreaView,
+  Alert
+} from 'react-native';
+import { Trash2, History, ChevronRight } from 'lucide-react-native';
 import { UrduText } from '../components/UrduText';
-import { CropCard } from '../components/CropCard';
-import { storage } from '../utils/storage';
+import { getScans, deleteScan, getLanguage } from '../utils/storage';
 import { ScanRecord } from '../types';
-import { motion, AnimatePresence } from 'motion/react';
-import { useLanguage } from '../contexts/LanguageContext';
-import { cn } from '../lib/utils';
 
-const HistoryScreen: React.FC = () => {
-  const navigate = useNavigate();
-  const { t, language } = useLanguage();
-  const [history, setHistory] = useState<ScanRecord[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
+const HistoryScreen = ({ navigation }: any) => {
+  const [scans, setScans] = useState<ScanRecord[]>([]);
+  const [lang, setLang] = useState<'en' | 'ur'>('ur');
 
-  useEffect(() => {
-    setHistory(storage.getHistory());
-  }, []);
-
-  const handleDelete = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    storage.removeFromHistory(id);
-    setHistory(storage.getHistory());
+  const loadData = async () => {
+    const data = await getScans();
+    setScans(data);
+    const savedLang = await getLanguage();
+    setLang(savedLang);
   };
 
-  const filteredHistory = history.filter(item => {
-    if (!searchQuery.trim()) return true;
-    const query = searchQuery.toLowerCase();
-    
-    return (
-      item.result.disease_name_ur?.toLowerCase().includes(query) || 
-      item.result.disease_name_en?.toLowerCase().includes(query) ||
-      item.result.crop_type_ur?.toLowerCase().includes(query) ||
-      item.result.crop_type_en?.toLowerCase().includes(query)
+  useEffect(() => {
+    loadData();
+    const unsubscribe = navigation.addListener('focus', loadData);
+    return unsubscribe;
+  }, [navigation]);
+
+  const isUrdu = lang === 'ur';
+
+  const handleDelete = (id: string) => {
+    Alert.alert(
+      isUrdu ? 'حذف کریں' : 'Delete',
+      isUrdu ? 'کیا آپ اس اسکین کو حذف کرنا چاہتے ہیں؟' : 'Are you sure you want to delete this scan?',
+      [
+        { text: isUrdu ? 'نہیں' : 'Cancel', style: 'cancel' },
+        { 
+          text: isUrdu ? 'ہاں' : 'Delete', 
+          style: 'destructive',
+          onPress: async () => {
+            await deleteScan(id);
+            loadData();
+          }
+        }
+      ]
     );
-  });
+  };
+
+  const renderItem = ({ item }: { item: ScanRecord }) => (
+    <TouchableOpacity 
+      style={styles.card}
+      onPress={() => navigation.navigate('Home', { screen: 'Result', params: { result: item.result, imageUri: item.imageUri, isFresh: false } })}
+    >
+      <Image source={{ uri: item.imageUri }} style={styles.thumbnail} />
+      <View style={styles.cardContent}>
+        <UrduText style={styles.cardDate}>{item.date}</UrduText>
+        <UrduText style={styles.cardTitle}>
+          {isUrdu ? item.result.diseaseName_ur : item.result.diseaseName_en}
+        </UrduText>
+        <View style={styles.severityTag}>
+           <View style={[styles.dot, { backgroundColor: item.result.severity === 'Low' ? '#52B788' : '#D00000' }]} />
+           <UrduText style={styles.severityText}>{item.result.severity}</UrduText>
+        </View>
+      </View>
+      <TouchableOpacity onPress={() => handleDelete(item.id)} style={styles.deleteButton}>
+        <Trash2 color="#D00000" size={20} />
+      </TouchableOpacity>
+      <ChevronRight color="#CCC" size={20} />
+    </TouchableOpacity>
+  );
 
   return (
-    <div className="flex flex-col h-full bg-brand-cream">
-      <header className="p-6 pt-10">
-        <div className="flex items-center justify-between mb-2">
-          <h1 className="text-4xl font-black">{t('history')}</h1>
-          <HistoryIcon className="w-8 h-8 text-brand-accent" />
-        </div>
-        <UrduText className="text-sm opacity-50 mb-6">{language === 'ur' ? 'آپ کے تمام پچھلے اسکینز' : 'All your previous scans'}</UrduText>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <UrduText style={styles.title}>
+          {isUrdu ? 'تاریخ' : 'History'}
+        </UrduText>
+      </View>
 
-        <div className="relative">
-          <Search className={cn(
-            "absolute top-1/2 -translate-y-1/2 w-4 h-4 text-brand-background/30 z-10",
-            language === 'ur' ? "right-4" : "left-4"
-          )} />
-          <input 
-            dir={language === 'ur' ? 'rtl' : 'ltr'}
-            type="text"
-            placeholder={t('search')}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className={cn(
-              "w-full bg-[var(--bg-card)] border border-brand-accent/20 rounded-2xl py-3 outline-none focus:border-brand-accent transition-all font-urdu",
-              language === 'ur' ? "pr-12 pl-4" : "pl-12 pr-4"
-            )}
-          />
-        </div>
-      </header>
-
-      <div className="flex-grow overflow-y-auto px-6 pb-24">
-        {history.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full opacity-30 gap-4 mt-20">
-            <HistoryIcon className="w-20 h-20" />
-            <UrduText className="text-xl font-bold">{t('noHistory')}</UrduText>
-          </div>
-        ) : filteredHistory.length === 0 ? (
-           <div className="flex flex-col items-center justify-center p-12 opacity-30 gap-2">
-            <AlertCircle className="w-12 h-12" />
-            <UrduText className="text-lg">{t('noResults')}</UrduText>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-4">
-            <AnimatePresence>
-              {filteredHistory.map((scan) => (
-                <motion.div
-                  key={scan.id}
-                  layout
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  className="relative group"
-                >
-                  <CropCard 
-                    scan={scan} 
-                    onClick={() => navigate('/result', { state: { result: scan.result, imageUri: scan.imageUri, isFromHistory: true } })}
-                  />
-                  <button 
-                    onClick={(e) => handleDelete(scan.id, e)}
-                    className="absolute -top-2 -right-2 bg-danger text-white p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:scale-110 active:scale-95"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
-        )}
-      </div>
-    </div>
+      {scans.length > 0 ? (
+        <FlatList
+          data={scans}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+        />
+      ) : (
+        <View style={styles.emptyState}>
+          <History color="#CCC" size={80} strokeWidth={1} />
+          <UrduText style={styles.emptyText}>
+            {isUrdu ? 'ابھی تک کوئی اسکین نہیں کیا گیا۔' : 'No scans saved yet.'}
+          </UrduText>
+          <TouchableOpacity 
+            style={styles.scanNowButton}
+            onPress={() => navigation.navigate('Home')}
+          >
+            <UrduText style={styles.scanNowText}>
+              {isUrdu ? 'ابھی اسکین کریں' : 'Scan Now'}
+            </UrduText>
+          </TouchableOpacity>
+        </View>
+      )}
+    </SafeAreaView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F8F9FA',
+  },
+  header: {
+    padding: 20,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEE',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1B4332',
+    textAlign: 'left',
+  },
+  listContent: {
+    padding: 15,
+    paddingBottom: 30,
+  },
+  card: {
+    backgroundColor: 'white',
+    borderRadius: 15,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  thumbnail: {
+    width: 60,
+    height: 60,
+    borderRadius: 10,
+    backgroundColor: '#EEE',
+  },
+  cardContent: {
+    flex: 1,
+    marginLeft: 15,
+  },
+  cardDate: {
+    fontSize: 10,
+    color: '#AAA',
+    marginBottom: 2,
+    textAlign: 'left',
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'left',
+  },
+  severityTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 6,
+  },
+  severityText: {
+    fontSize: 10,
+    color: '#666',
+    fontWeight: 'bold',
+  },
+  deleteButton: {
+    padding: 10,
+    marginRight: 5,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  emptyText: {
+    marginTop: 20,
+    fontSize: 16,
+    color: '#888',
+    textAlign: 'center',
+  },
+  scanNowButton: {
+    marginTop: 25,
+    backgroundColor: '#1B4332',
+    paddingHorizontal: 30,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  scanNowText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+});
 
 export default HistoryScreen;

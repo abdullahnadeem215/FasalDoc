@@ -1,44 +1,71 @@
-import { ScanRecord } from "../types";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ScanRecord } from '../types';
 
-const STORAGE_KEYS = {
+const KEYS = {
   API_KEY: 'gemini_api_key',
-  SCAN_HISTORY: 'scan_history',
-  LANGUAGE: 'app_language'
+  SCANS: 'saved_scans',
+  LANGUAGE: 'app_language',
+  SHOWN_ALERTS: 'shown_alerts',
+  ALERT_HISTORY: 'alert_history'
 };
 
-export const storage = {
-  getApiKey: (): string | null => {
-    return localStorage.getItem(STORAGE_KEYS.API_KEY);
-  },
-  setApiKey: (key: string) => {
-    localStorage.setItem(STORAGE_KEYS.API_KEY, key);
-  },
-  
-  getHistory: (): ScanRecord[] => {
-    const data = localStorage.getItem(STORAGE_KEYS.SCAN_HISTORY);
-    return data ? JSON.parse(data) : [];
-  },
-  saveToHistory: (record: ScanRecord): boolean => {
-    try {
-      const history = storage.getHistory();
-      const updatedHistory = [record, ...history];
-      localStorage.setItem(STORAGE_KEYS.SCAN_HISTORY, JSON.stringify(updatedHistory));
-      return true;
-    } catch (e) {
-      console.error("Storage Error:", e);
-      return false;
-    }
-  },
-  removeFromHistory: (id: string) => {
-    const history = storage.getHistory();
-    const updatedHistory = history.filter(item => item.id !== id);
-    localStorage.setItem(STORAGE_KEYS.SCAN_HISTORY, JSON.stringify(updatedHistory));
-  },
+export const saveApiKey = async (key: string) => {
+  await AsyncStorage.setItem(KEYS.API_KEY, key);
+};
 
-  getLanguage: (): 'ur' | 'en' => {
-    return (localStorage.getItem(STORAGE_KEYS.LANGUAGE) as 'ur' | 'en') || 'ur';
-  },
-  setLanguage: (lang: 'ur' | 'en') => {
-    localStorage.setItem(STORAGE_KEYS.LANGUAGE, lang);
+export const getApiKey = async () => {
+  return await AsyncStorage.getItem(KEYS.API_KEY);
+};
+
+export const saveScan = async (scan: ScanRecord) => {
+  const existing = await getScans();
+  const updated = [scan, ...existing];
+  await AsyncStorage.setItem(KEYS.SCANS, JSON.stringify(updated));
+};
+
+export const getScans = async (): Promise<ScanRecord[]> => {
+  const data = await AsyncStorage.getItem(KEYS.SCANS);
+  return data ? JSON.parse(data) : [];
+};
+
+export const deleteScan = async (id: string) => {
+  const existing = await getScans();
+  const updated = existing.filter(s => s.id !== id);
+  await AsyncStorage.setItem(KEYS.SCANS, JSON.stringify(updated));
+};
+
+export const clearHistory = async () => {
+  await AsyncStorage.removeItem(KEYS.SCANS);
+};
+
+export const setLanguage = async (lang: 'en' | 'ur') => {
+  await AsyncStorage.setItem(KEYS.LANGUAGE, lang);
+};
+
+export const getLanguage = async (): Promise<'en' | 'ur'> => {
+  const lang = await AsyncStorage.getItem(KEYS.LANGUAGE);
+  return (lang as 'en' | 'ur') || 'ur';
+};
+
+// Alert Storage
+export const markAlertAsShown = async (alertId: string) => {
+  const shown = await getShownAlerts();
+  if (!shown.includes(alertId)) {
+    await AsyncStorage.setItem(KEYS.SHOWN_ALERTS, JSON.stringify([...shown, alertId]));
   }
+};
+
+export const getShownAlerts = async (): Promise<string[]> => {
+  const data = await AsyncStorage.getItem(KEYS.SHOWN_ALERTS);
+  return data ? JSON.parse(data) : [];
+};
+
+export const saveAlertToHistory = async (alert: any) => {
+  const history = await getAlertHistory();
+  await AsyncStorage.setItem(KEYS.ALERT_HISTORY, JSON.stringify([alert, ...history]));
+};
+
+export const getAlertHistory = async (): Promise<any[]> => {
+  const data = await AsyncStorage.getItem(KEYS.ALERT_HISTORY);
+  return data ? JSON.parse(data) : [];
 };

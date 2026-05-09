@@ -1,36 +1,28 @@
 import React from 'react';
-import { cn } from '../lib/utils';
-import { useLanguage } from '../contexts/LanguageContext';
+import { Text, TextProps, StyleSheet, Platform } from 'react-native';
 
-interface LocalizedTextProps {
+interface UrduTextProps extends TextProps {
   children: React.ReactNode;
-  className?: string;
-  as?: 'p' | 'h1' | 'h2' | 'h3' | 'span' | 'div';
 }
 
-/**
- * Component to render text with proper RTL/LTR and font settings based on language
- */
-export const LocalizedText: React.FC<LocalizedTextProps> = ({ 
-  children, 
-  className, 
-  as: Component = 'p' 
-}) => {
-  const { isRTL, language } = useLanguage();
-  
+export const UrduText: React.FC<UrduTextProps> = ({ children, style, ...props }) => {
   return (
-    <Component 
-      dir={isRTL ? "rtl" : "ltr"} 
-      className={cn(
-        language === 'ur' ? "font-urdu text-right" : "font-sans text-left",
-        "leading-relaxed",
-        className
-      )}
+    <Text 
+      {...props} 
+      style={[
+        styles.urduText, 
+        style
+      ]}
     >
       {children}
-    </Component>
+    </Text>
   );
 };
 
-// Keep UrduText as an alias for backward compatibility or specific Urdu usage
-export const UrduText = LocalizedText;
+const styles = StyleSheet.create({
+  urduText: {
+    fontFamily: Platform.OS === 'ios' ? 'Jameel Noori Nastaleeq' : 'sans-serif', // Fallback for native
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+});

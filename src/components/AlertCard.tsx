@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, Bell, MapPin, Calendar, ExternalLink } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { View, StyleSheet, TouchableOpacity, LayoutAnimation, Platform, UIManager } from 'react-native';
+import { ChevronDown, ChevronUp, Calendar, ExternalLink } from 'lucide-react-native';
 import { UrduText } from './UrduText';
 import { Alert } from '../data/mockAlerts';
-import { cn } from '../lib/utils';
-import { useLanguage } from '../contexts/LanguageContext';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 interface AlertCardProps {
   alert: Alert;
@@ -12,125 +14,221 @@ interface AlertCardProps {
 
 export const AlertCard: React.FC<AlertCardProps> = ({ alert }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const { language } = useLanguage();
-  const isUrdu = language === 'ur';
+  const isUrdu = true; // Defaulting to true for demo, should be from context
 
-  const severityColors = {
-    Severe: 'bg-danger',
-    High: 'bg-danger/80',
-    Medium: 'bg-warning',
-    Low: 'bg-success',
+  const toggleExpand = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setIsExpanded(!isExpanded);
   };
 
-  const severityBorder = {
-    Severe: 'border-danger',
-    High: 'border-danger/80',
-    Medium: 'border-warning',
-    Low: 'border-success',
+  const severityColors: any = {
+    Severe: '#D00000',
+    High: '#FB8500',
+    Medium: '#FFB703',
+    Low: '#52B788',
   };
 
-  const getTypeIcon = (type: Alert['type']) => {
+  const getTypeIcon = (type: string) => {
     switch (type) {
       case 'pest': return '🐛';
       case 'disease': return '🦠';
-      case 'locust': return '🦗';
       case 'weather': return '🌦️';
-      case 'climate_migration': return '🌊';
       default: return '⚠️';
     }
   };
 
   return (
-    <motion.div 
-      layout
-      className="premium-card mb-4 relative overflow-hidden"
-    >
-      {/* Side color strip */}
-      <div className={cn("absolute top-0 bottom-0 w-1.5", severityColors[alert.severity])} />
+    <View style={styles.card}>
+      <View style={[styles.sideStrip, { backgroundColor: severityColors[alert.severity] }]} />
       
-      <div className="p-4 pl-6">
-        {/* Header Row */}
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-          <div className="flex items-center gap-2">
-            <span className="text-xl" title={alert.type}>{getTypeIcon(alert.type)}</span>
-            <span className={cn(
-              "px-3 py-1 rounded-full text-[10px] font-bold text-white uppercase tracking-wider",
-              severityColors[alert.severity]
-            )}>
-              {alert.severity}
-            </span>
-            <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-brand-primary/10 text-brand-primary uppercase tracking-wider">
-              {isUrdu ? alert.crop_ur : alert.crop}
-            </span>
-          </div>
-          <div className="flex items-center gap-1 text-[10px] text-gray-500">
-            <Calendar className="w-3 h-3" />
-            <span>{alert.valid_from}</span>
-          </div>
-        </div>
+      <View style={styles.content}>
+        <View style={styles.headerRow}>
+          <View style={styles.badgeRow}>
+            <UrduText style={styles.typeIcon}>{getTypeIcon(alert.type)}</UrduText>
+            <View style={[styles.badge, { backgroundColor: severityColors[alert.severity] }]}>
+              <UrduText style={styles.badgeText}>{alert.severity}</UrduText>
+            </View>
+            <View style={styles.cropBadge}>
+              <UrduText style={styles.cropBadgeText}>{alert.crop_ur}</UrduText>
+            </View>
+          </View>
+          <View style={styles.dateRow}>
+            <Calendar size={12} color="#AAA" />
+            <UrduText style={styles.dateText}>{alert.valid_from}</UrduText>
+          </View>
+        </View>
 
-        {/* Title */}
-        <UrduText className="text-xl font-bold mb-2 leading-tight">
-          {isUrdu ? alert.title_ur : alert.title_en}
+        <UrduText style={styles.title}>{alert.title_ur}</UrduText>
+        <UrduText style={styles.description} numberOfLines={isExpanded ? 0 : 2}>
+          {alert.description_ur}
         </UrduText>
 
-        {/* Description */}
-        <UrduText className={cn(
-          "text-sm text-gray-600 mb-4 transition-all duration-300",
-          !isExpanded && "line-clamp-2"
-        )}>
-          {isUrdu ? alert.description_ur : alert.description_en}
-        </UrduText>
+        {isExpanded && (
+          <View style={styles.expandedSection}>
+            <View style={styles.divider} />
+            <UrduText style={styles.sectionTitle}>احتیاطی تدابیر:</UrduText>
+            {alert.precautions_ur.map((p, i) => (
+              <View key={i} style={styles.precautionItem}>
+                <View style={styles.bullet}>
+                  <UrduText style={styles.bulletText}>{i + 1}</UrduText>
+                </View>
+                <UrduText style={styles.precautionText}>{p}</UrduText>
+              </View>
+            ))}
+            <View style={styles.footerRow}>
+               <ExternalLink size={12} color="#AAA" />
+               <UrduText style={styles.sourceText}>{alert.source}</UrduText>
+            </View>
+          </View>
+        )}
 
-        {/* Expandable Section */}
-        <AnimatePresence>
-          {isExpanded && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden mb-4"
-            >
-              <div className="pt-4 border-t border-gray-100">
-                <UrduText className="font-bold text-brand-primary mb-3">
-                  {isUrdu ? 'احتیاطی تدابیر:' : 'Precautions:'}
-                </UrduText>
-                <ul className="space-y-2">
-                  {(isUrdu ? alert.precautions_ur : alert.precautions_en).map((p, i) => (
-                    <li key={i} className="flex gap-3 text-sm">
-                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-brand-primary text-white flex items-center justify-center text-[10px] font-bold">
-                        {i + 1}
-                      </span>
-                      <UrduText className="flex-1">{p}</UrduText>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              
-              <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between text-[10px] text-gray-400">
-                <div className="flex items-center gap-1">
-                  <ExternalLink className="w-3 h-3" />
-                  <span>{alert.source}</span>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Toggle Button */}
-        <button 
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="w-full flex items-center justify-center gap-2 py-2 text-brand-primary hover:bg-brand-primary/5 rounded-xl transition-colors text-xs font-bold"
-        >
-          <UrduText className="m-0 !text-inherit">
-            {isUrdu 
-              ? (isExpanded ? 'کم معلومات' : 'احتیاطی تدابیر دیکھیں')
-              : (isExpanded ? 'Show Less' : 'View Precautions')
-            }
+        <TouchableOpacity style={styles.toggleBtn} onPress={toggleExpand}>
+          <UrduText style={styles.toggleText}>
+            {isExpanded ? 'کم معلومات' : 'احتیاطی تدابیر دیکھیں'}
           </UrduText>
-          {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-        </button>
-      </div>
-    </motion.div>
+          {isExpanded ? <ChevronUp size={16} color="#1B4332" /> : <ChevronDown size={16} color="#1B4332" />}
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: 'white',
+    borderRadius: 15,
+    marginBottom: 15,
+    flexDirection: 'row',
+    overflow: 'hidden',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  sideStrip: {
+    width: 6,
+  },
+  content: {
+    flex: 1,
+    padding: 15,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  typeIcon: {
+    fontSize: 18,
+  },
+  badge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  badgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  cropBadge: {
+    backgroundColor: '#E9F5EF',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  cropBadgeText: {
+    color: '#1B4332',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  dateText: {
+    fontSize: 9,
+    color: '#AAA',
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 5,
+  },
+  description: {
+    fontSize: 13,
+    color: '#666',
+    lineHeight: 18,
+    marginBottom: 10,
+  },
+  expandedSection: {
+    marginTop: 10,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#F0F0F0',
+    marginBottom: 15,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#1B4332',
+    marginBottom: 10,
+  },
+  precautionItem: {
+    flexDirection: 'row-reverse',
+    gap: 12,
+    marginBottom: 8,
+  },
+  bullet: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#1B4332',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bulletText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  precautionText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#444',
+    lineHeight: 18,
+  },
+  footerRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    marginTop: 15,
+    gap: 5,
+  },
+  sourceText: {
+    fontSize: 9,
+    color: '#BBB',
+  },
+  toggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    marginTop: 5,
+    gap: 5,
+  },
+  toggleText: {
+    color: '#1B4332',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+});
