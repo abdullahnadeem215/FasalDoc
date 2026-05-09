@@ -1,267 +1,168 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  StyleSheet, 
-  ScrollView, 
-  Image, 
-  TouchableOpacity, 
-  Dimensions, 
-  LayoutAnimation, 
-  Platform, 
-  UIManager,
-  SafeAreaView
-} from 'react-native';
-import { ChevronDown, ChevronUp, Save, Camera, ShieldCheck, AlertTriangle, Info } from 'lucide-react-native';
+import React, { useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { ChevronLeft, ChevronDown, ChevronUp, Save, RefreshCw, CheckCircle2, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { UrduText } from '../components/UrduText';
-import { saveScan, getLanguage } from '../utils/storage';
-import { DiseaseResult } from '../types';
+import { SeverityBadge } from '../components/SeverityBadge';
+import { DiseaseResult, ScanRecord } from '../types';
+import { storage } from '../utils/storage';
+import { motion, AnimatePresence } from 'motion/react';
+import { cn } from '../lib/utils';
+import { useLanguage } from '../contexts/LanguageContext';
 
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
+const ResultScreen: React.FC = () => {
+  const { t, language } = useLanguage();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const state = location.state as { result: DiseaseResult; imageUri: string; isFromHistory?: boolean };
 
-const { width } = Dimensions.get('window');
-
-const ResultScreen = ({ route, navigation }: any) => {
-  const { result, imageUri, isFresh } = route.params as { result: DiseaseResult; imageUri: string; isFresh?: boolean };
   const [expandedSection, setExpandedSection] = useState<string | null>('symptoms');
-  const [isSaved, setIsSaved] = useState(!isFresh);
-  const [lang, setLang] = useState<'en' | 'ur'>('ur');
+  const [isSaved, setIsSaved] = useState(state?.isFromHistory || false);
 
-  useEffect(() => {
-    const loadLang = async () => {
-      const savedLang = await getLanguage();
-      setLang(savedLang);
-    };
-    loadLang();
-  }, []);
+  if (!state) {
+    return (
+      <div className="p-6 text-center">
+        <UrduText className="text-xl">Data not available</UrduText>
+        <button onClick={() => navigate('/')} className="gold-button mt-4">{t('home')}</button>
+      </div>
+    );
+  }
 
-  const isUrdu = lang === 'ur';
+  const { result, imageUri } = state;
 
-  const toggleSection = (section: string) => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setExpandedSection(expandedSection === section ? null : section);
-  };
-
-  const handleSave = async () => {
+  const handleSave = () => {
     if (isSaved) return;
-    const scan = {
+    const record: ScanRecord = {
       id: Date.now().toString(),
-      date: new Date().toLocaleDateString(),
+      timestamp: Date.now(),
       imageUri,
       result
     };
-    await saveScan(scan);
-    setIsSaved(true);
-  };
-
-  const severityData = {
-    Low: { color: '#52B788', icon: <ShieldCheck color="white" size={16} /> },
-    Medium: { color: '#FFB703', icon: <Info color="white" size={16} /> },
-    High: { color: '#FB8500', icon: <AlertTriangle color="white" size={16} /> },
-    Severe: { color: '#D00000', icon: <AlertTriangle color="white" size={16} /> },
+    const success = storage.saveToHistory(record);
+    if (success) {
+      setIsSaved(true);
+    } else {
+      alert(language === 'ur' ? 'ڈیٹا محفوظ کرنے کے لیے جگہ ختم ہو گئی ہے' : 'Storage full. Cannot save more records.');
+    }
   };
 
   const sections = [
-    { id: 'symptoms', en: 'Symptoms', ur: 'علامات', contentEn: result.symptoms_en, contentUr: result.symptoms_ur },
-    { id: 'treatment', en: 'Treatment', ur: 'علاج', contentEn: result.treatment_en, contentUr: result.treatment_ur },
-    { id: 'prevention', en: 'Prevention', ur: 'بچاؤ', contentEn: result.prevention_en, contentUr: result.prevention_ur },
+    { id: 'symptoms', title: t('symptoms'), ur: result.symptoms_ur, en: result.symptoms_en, color: 'bg-brand-primary/5' },
+    { id: 'treatment', title: t('treatment'), ur: result.treatment_ur, en: result.treatment_en, color: 'bg-success/5' },
+    { id: 'prevention', title: t('prevention'), ur: result.prevention_ur, en: result.prevention_en, color: 'bg-warning/5' },
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.imageContainer}>
-          <Image source={{ uri: imageUri }} style={styles.mainImage} />
-          <View style={[styles.severityBadge, { backgroundColor: severityData[result.severity].color }]}>
-            {severityData[result.severity].icon}
-            <UrduText style={styles.severityText}>{result.severity}</UrduText>
-          </View>
-        </View>
-
-        <View style={styles.contentCard}>
-          <View style={styles.headerRow}>
-            <View flex={1}>
-              <UrduText style={styles.diseaseName}>
-                {isUrdu ? result.diseaseName_ur : result.diseaseName_en}
-              </UrduText>
-              <UrduText style={styles.confidenceText}>
-                {isUrdu ? `${Math.round(result.confidence * 100)}% درستگی` : `${Math.round(result.confidence * 100)}% Confidence`}
-              </UrduText>
-            </View>
-            <TouchableOpacity 
-              style={[styles.saveButton, isSaved && styles.savedButton]} 
-              onPress={handleSave}
-              disabled={isSaved}
-            >
-              <Save color={isSaved ? '#1B4332' : 'white'} size={20} />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.divider} />
-
-          {sections.map((section) => (
-            <View key={section.id} style={styles.sectionContainer}>
-              <TouchableOpacity 
-                style={styles.sectionHeader} 
-                onPress={() => toggleSection(section.id)}
-              >
-                <UrduText style={styles.sectionTitle}>
-                  {isUrdu ? section.ur : section.en}
-                </UrduText>
-                {expandedSection === section.id ? <ChevronUp color="#1B4332" /> : <ChevronDown color="#1B4332" />}
-              </TouchableOpacity>
-              {expandedSection === section.id && (
-                <View style={styles.sectionBody}>
-                  <UrduText style={styles.sectionContent}>
-                    {isUrdu ? section.contentUr : section.contentEn}
-                  </UrduText>
-                </View>
-              )}
-            </View>
-          ))}
-        </View>
-
-        <TouchableOpacity 
-          style={styles.footerButton}
-          onPress={() => navigation.navigate('HomeStack')}
+    <div className="flex flex-col min-h-screen bg-brand-cream relative pb-10">
+      {/* Header Image */}
+      <div className="relative h-[35vh] w-full group">
+        <img src={imageUri} alt="Scanned Crop" className="w-full h-full object-cover shadow-2xl" />
+        <div className="absolute inset-0 bg-gradient-to-t from-brand-background/80 to-transparent" />
+        
+        <button 
+          onClick={() => navigate(-1)}
+          className="absolute top-6 left-6 p-3 bg-brand-background/20 backdrop-blur-md rounded-2xl text-white hover:bg-brand-background/40 transition-all border border-white/10"
         >
-          <Camera color="white" size={24} />
-          <UrduText style={styles.footerButtonText}>
-            {isUrdu ? 'دوبارہ اسکین کریں' : 'Scan Again'}
-          </UrduText>
-        </TouchableOpacity>
-      </ScrollView>
-    </SafeAreaView>
+          <ChevronLeft className="w-6 h-6" />
+        </button>
+
+        <div className="absolute bottom-6 left-6 right-6 flex items-end justify-between">
+           <div>
+             <UrduText className="text-3xl font-black !text-brand-cream !text-left drop-shadow-lg">
+                {language === 'ur' ? result.crop_type_ur : result.crop_type_en}
+             </UrduText>
+             <p className="text-brand-cream/60 font-mono uppercase tracking-[0.2em] text-xs">
+                {language === 'ur' ? result.crop_type_en : result.crop_type_ur}
+             </p>
+           </div>
+           <div className="bg-brand-accent/20 backdrop-blur-md px-4 py-2 rounded-2xl border border-brand-accent/30">
+              <span className="text-brand-accent text-sm font-bold">{result.confidence_percent}% Confidence</span>
+           </div>
+        </div>
+      </div>
+
+      {/* Result Card */}
+      <div className="px-6 -mt-8 relative z-10 flex flex-col gap-4">
+        <div className="premium-card p-6 flex flex-col items-center text-center gap-2">
+          {result.healthy ? (
+            <div className="p-3 bg-success/20 rounded-full text-success"><CheckCircle2 className="w-10 h-10" /></div>
+          ) : (
+            <div className="p-3 bg-danger/20 rounded-full text-danger"><AlertTriangle className="w-10 h-10" /></div>
+          )}
+
+          <div className="mt-2 text-center w-full">
+            <UrduText className={cn("text-4xl font-black mb-1", result.healthy ? "text-success" : "text-danger")}>
+              {language === 'ur' 
+                ? (result.disease_name_ur || t('healthy')) 
+                : (result.disease_name_en || t('healthy'))}
+            </UrduText>
+            <p className="text-brand-background/40 font-mono text-xs uppercase tracking-widest text-center">
+              {language === 'ur' 
+                ? (result.disease_name_en || 'Healthy Plant') 
+                : (result.disease_name_ur || 'صحت مند پودا')}
+            </p>
+          </div>
+
+          {!result.healthy && <SeverityBadge severity={result.severity} className="mt-2 scale-125" />}
+        </div>
+
+        {/* Expandable Sections */}
+        {!result.healthy && sections.map((section) => (
+          <div key={section.id} className={cn("premium-card border-none transition-all", section.color)}>
+            <button 
+              onClick={() => setExpandedSection(expandedSection === section.id ? null : section.id)}
+              className="w-full flex items-center justify-between p-5 outline-none"
+            >
+              <UrduText className="text-2xl font-black text-brand-background">{section.title}</UrduText>
+              {expandedSection === section.id ? <ChevronUp className="w-6 h-6 text-brand-accent" /> : <ChevronDown className="w-6 h-6 text-brand-accent/50" />}
+            </button>
+            
+            <AnimatePresence>
+              {expandedSection === section.id && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="px-5 pb-5 pt-0 flex flex-col gap-3">
+                    <UrduText className="text-xl font-bold leading-[2.2] text-brand-background bg-white/60 p-5 rounded-2xl border border-brand-accent/20 shadow-inner">
+                      {language === 'ur' ? (section.ur || 'معلومات دستیاب نہیں ہے') : (section.en || 'Information not available')}
+                    </UrduText>
+                    <p className="text-sm font-medium italic text-brand-background/50 pl-2 leading-relaxed">
+                      {language === 'ur' ? section.en : section.ur}
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        ))}
+
+        {/* Action Buttons */}
+        <div className="flex flex-col gap-3 mt-4">
+          <button 
+            onClick={handleSave}
+            disabled={isSaved}
+            className={cn(
+              "w-full py-4 rounded-3xl font-bold text-xl flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg",
+              isSaved ? "bg-success text-white" : "bg-brand-accent text-white"
+            )}
+          >
+            {isSaved ? <ShieldCheck className="w-6 h-6" /> : <Save className="w-6 h-6" />}
+            <UrduText className="m-0 !text-white">{isSaved ? t('saved') : t('save')}</UrduText>
+          </button>
+
+          <button 
+            onClick={() => navigate('/')}
+            className="w-full py-4 rounded-3xl border-2 border-brand-primary text-brand-primary font-bold text-xl flex items-center justify-center gap-3 hover:bg-brand-primary hover:text-white transition-all active:scale-95"
+          >
+            <RefreshCw className="w-6 h-6" />
+            <UrduText className="m-0 !text-inherit">{t('scanAgain')}</UrduText>
+          </button>
+        </div>
+      </div>
+    </div>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8F9FA',
-  },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  imageContainer: {
-    width: '100%',
-    height: 300,
-    borderRadius: 24,
-    overflow: 'hidden',
-    backgroundColor: '#ddd',
-    marginBottom: 20,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-  },
-  mainImage: {
-    width: '100%',
-    height: '100%',
-  },
-  severityBadge: {
-    position: 'absolute',
-    top: 20,
-    right: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 6,
-  },
-  severityText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  contentCard: {
-    backgroundColor: 'white',
-    borderRadius: 24,
-    padding: 20,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    marginBottom: 25,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 15,
-  },
-  diseaseName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1B4332',
-    textAlign: 'left',
-  },
-  confidenceText: {
-    fontSize: 14,
-    color: '#52B788',
-    marginTop: 2,
-    textAlign: 'left',
-  },
-  saveButton: {
-    backgroundColor: '#1B4332',
-    padding: 12,
-    borderRadius: 15,
-  },
-  savedButton: {
-    backgroundColor: '#E9F5EF',
-    borderWidth: 1,
-    borderColor: '#1B4332',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#F0F0F0',
-    marginVertical: 10,
-  },
-  sectionContainer: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 15,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'left',
-  },
-  sectionBody: {
-    paddingBottom: 15,
-  },
-  sectionContent: {
-    fontSize: 15,
-    color: '#555',
-    lineHeight: 22,
-    textAlign: 'left',
-  },
-  footerButton: {
-    backgroundColor: '#1B4332',
-    height: 60,
-    borderRadius: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    marginTop: 10,
-  },
-  footerButtonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-});
 
 export default ResultScreen;

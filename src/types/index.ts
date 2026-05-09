@@ -1,32 +1,22 @@
 export interface DiseaseResult {
-  diseaseName_en: string;
-  diseaseName_ur: string;
-  severity: 'Low' | 'Medium' | 'High' | 'Severe';
-  confidence: number;
-  symptoms_en: string;
-  symptoms_ur: string;
-  treatment_en: string;
-  treatment_ur: string;
-  prevention_en: string;
-  prevention_ur: string;
-  urdu_audio_url?: string;
+  healthy: boolean;
+  crop_type_en: string;
+  crop_type_ur: string;
+  disease_name_en: string | null;
+  disease_name_ur: string | null;
+  severity: 'Low' | 'Medium' | 'High' | 'Severe' | null;
+  confidence_percent: number;
+  symptoms_ur: string | null;
+  symptoms_en: string | null;
+  treatment_ur: string | null;
+  treatment_en: string | null;
+  prevention_ur: string | null;
+  prevention_en: string | null;
 }
 
 export interface ScanRecord {
   id: string;
-  date: string;
+  timestamp: number;
   imageUri: string;
   result: DiseaseResult;
 }
-
-export type RootStackParamList = {
-  HomeStack: undefined;
-  Alerts: undefined;
-  History: undefined;
-  Settings: undefined;
-  Result: { 
-    result: DiseaseResult;
-    imageUri: string;
-    isFresh?: boolean;
-  };
-};

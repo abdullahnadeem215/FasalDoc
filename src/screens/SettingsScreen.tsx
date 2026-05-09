@@ -1,234 +1,122 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  StyleSheet, 
-  TextInput, 
-  TouchableOpacity, 
-  ScrollView, 
-  SafeAreaView, 
-  Alert,
-  Switch
-} from 'react-native';
-import { Key, Eye, EyeOff, Globe, Info, Trash, ChevronRight } from 'lucide-react-native';
+import React, { useState } from 'react';
+import { Key, ShieldCheck, ExternalLink, Languages } from 'lucide-react';
 import { UrduText } from '../components/UrduText';
-import { getApiKey, saveApiKey, getLanguage, setLanguage, clearHistory } from '../utils/storage';
+import { storage } from '../utils/storage';
+import { useLanguage } from '../contexts/LanguageContext';
 
-const SettingsScreen = () => {
-  const [apiKey, setApiKey] = useState('');
+const SettingsScreen: React.FC = () => {
+  const { language, setLanguage, t } = useLanguage();
+  const [apiKey, setApiKey] = useState(storage.getApiKey() || '');
   const [showKey, setShowKey] = useState(false);
-  const [lang, setLang] = useState<'en' | 'ur'>('ur');
+  const [saved, setSaved] = useState(false);
 
-  useEffect(() => {
-    const loadSettings = async () => {
-      const key = await getApiKey();
-      if (key) setApiKey(key);
-      const savedLang = await getLanguage();
-      setLang(savedLang);
-    };
-    loadSettings();
-  }, []);
-
-  const isUrdu = lang === 'ur';
-
-  const handleSaveKey = async () => {
-    await saveApiKey(apiKey);
-    Alert.alert(isUrdu ? 'کامیابی' : 'Success', isUrdu ? 'API کی محفوظ کر لی گئی ہے۔' : 'API Key saved successfully.');
+  const handleSave = () => {
+    storage.setApiKey(apiKey);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
   };
 
-  const handleToggleLanguage = async () => {
-    const newLang = lang === 'en' ? 'ur' : 'en';
-    await setLanguage(newLang);
-    setLang(newLang);
-  };
-
-  const handleClearHistory = () => {
-    Alert.alert(
-      isUrdu ? 'تاریخ صاف کریں' : 'Clear History',
-      isUrdu ? 'کیا آپ تمام محفوظ کردہ اسکینز کو حذف کرنا چاہتے ہیں؟' : 'Are you sure you want to delete all saved scans?',
-      [
-        { text: isUrdu ? 'نہیں' : 'Cancel', style: 'cancel' },
-        { 
-          text: isUrdu ? 'ہاں' : 'Clear', 
-          style: 'destructive',
-          onPress: async () => {
-            await clearHistory();
-            Alert.alert(isUrdu ? 'صاف ہو گیا' : 'Cleared', isUrdu ? 'تاریخ صاف کر دی گئی ہے۔' : 'History cleared.');
-          }
-        }
-      ]
-    );
+  const onLanguageChange = (lang: 'ur' | 'en') => {
+    setLanguage(lang);
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <UrduText style={styles.title}>
-          {isUrdu ? 'ترتیبات' : 'Settings'}
-        </UrduText>
-      </View>
+    <div className="p-6 flex flex-col gap-8">
+      <header className="pt-4">
+        <h1 className="text-3xl font-black">{t('settings')}</h1>
+        <UrduText className="text-sm opacity-50">{language === 'ur' ? 'اپنی ترجیحات یہاں ترتیب دیں' : 'Configure your preferences here'}</UrduText>
+      </header>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.section}>
-          <UrduText style={styles.sectionLabel}>{isUrdu ? 'API کی (Gemini)' : 'API Key (Gemini)'}</UrduText>
-          <View style={styles.inputContainer}>
-            <Key color="#1B4332" size={20} />
-            <TextInput
-              style={styles.input}
-              value={apiKey}
-              onChangeText={setApiKey}
-              placeholder="Enter Gemini API Key"
-              secureTextEntry={!showKey}
-              autoCapitalize="none"
-            />
-            <TouchableOpacity onPress={() => setShowKey(!showKey)}>
-              {showKey ? <EyeOff color="#666" size={20} /> : <Eye color="#666" size={20} />}
-            </TouchableOpacity>
-          </View>
-          <TouchableOpacity style={styles.saveButton} onPress={handleSaveKey}>
-            <UrduText style={styles.saveButtonText}>{isUrdu ? 'محفوظ کریں' : 'Save Key'}</UrduText>
-          </TouchableOpacity>
-        </View>
+      {/* API Key Section */}
+      <section className="premium-card p-6 flex flex-col gap-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-brand-accent rounded-xl text-white">
+            <Key className="w-5 h-5" />
+          </div>
+          <UrduText className="text-xl font-black text-brand-background">{t('apiKey')}</UrduText>
+        </div>
 
-        <View style={styles.section}>
-          <UrduText style={styles.sectionLabel}>{isUrdu ? 'ایپ سیٹنگز' : 'App Settings'}</UrduText>
-          
-          <View style={styles.settingItem}>
-            <View style={styles.settingLabelContainer}>
-              <Globe color="#1B4332" size={20} />
-              <UrduText style={styles.settingText}>{isUrdu ? 'زبان (اردو)' : 'Language (Urdu)'}</UrduText>
-            </View>
-            <Switch 
-              value={lang === 'ur'} 
-              onValueChange={handleToggleLanguage}
-              trackColor={{ false: "#767577", true: "#52B788" }}
-              thumbColor={lang === 'ur' ? "#1B4332" : "#f4f3f4"}
-            />
-          </View>
+        <div className="relative">
+          <input 
+            type={showKey ? 'text' : 'password'}
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            placeholder="AI Studio API Key"
+            className="w-full bg-brand-cream/30 border border-brand-accent/20 rounded-2xl pl-4 pr-16 py-4 text-brand-background outline-none focus:border-brand-accent transition-all placeholder:text-brand-background/20 font-mono text-sm"
+          />
+          <button 
+            onClick={() => setShowKey(!showKey)}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-accent text-xs font-bold uppercase tracking-wider px-2 py-1"
+          >
+            {showKey ? 'Hide' : 'Show'}
+          </button>
+        </div>
 
-          <TouchableOpacity style={styles.settingItem} onPress={handleClearHistory}>
-            <View style={styles.settingLabelContainer}>
-              <Trash color="#D00000" size={20} />
-              <UrduText style={[styles.settingText, { color: '#D00000' }]}>{isUrdu ? 'تاریخ صاف کریں' : 'Clear History'}</UrduText>
-            </View>
-            <ChevronRight color="#CCC" size={20} />
-          </TouchableOpacity>
-        </View>
+        <a 
+          href="https://aistudio.google.com" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 text-xs text-brand-accent font-bold hover:underline mt-1"
+        >
+          <ExternalLink className="w-3 h-3" />
+          <UrduText className="leading-none text-xs !text-inherit">{t('getApiKey')}</UrduText>
+        </a>
+      </section>
 
-        <View style={styles.section}>
-          <UrduText style={styles.sectionLabel}>{isUrdu ? 'معلومات' : 'Information'}</UrduText>
-          <View style={styles.settingItem}>
-            <View style={styles.settingLabelContainer}>
-              <Info color="#1B4332" size={20} />
-              <UrduText style={styles.settingText}>{isUrdu ? 'ورژن' : 'Version'}</UrduText>
-            </View>
-            <UrduText style={styles.settingValue}>1.0.0</UrduText>
-          </View>
-        </View>
+      {/* Language Selection */}
+      <section className="premium-card p-6 flex flex-col gap-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-brand-primary rounded-xl text-white">
+            <Languages className="w-5 h-5" />
+          </div>
+          <UrduText className="text-xl font-bold">{t('languageSelect')}</UrduText>
+        </div>
 
-        <View style={styles.footer}>
-          <UrduText style={styles.footerText}>
-            {isUrdu ? 'پاکستانی کسانوں کے لیے محبت کے ساتھ بنایا گیا' : 'Made with love for Pakistani farmers'}
-          </UrduText>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+        <div className="grid grid-cols-2 gap-3">
+          {(['ur', 'en'] as const).map((lang) => (
+            <button
+              key={lang}
+              onClick={() => onLanguageChange(lang)}
+              className={`px-4 py-3 rounded-2xl border transition-all flex flex-col items-center gap-1 ${
+                language === lang 
+                ? 'bg-brand-primary border-brand-primary text-white' 
+                : 'bg-[var(--bg-card)] border-brand-primary/10 text-brand-background hover:bg-brand-cream'
+              }`}
+            >
+              <UrduText className={`font-bold text-lg m-0 leading-tight ${language === lang ? '!text-white' : ''}`}>
+                {lang === 'ur' ? 'اردو' : 'English'}
+              </UrduText>
+              <span className="text-[10px] opacity-60 uppercase tracking-widest">{lang === 'ur' ? 'Native' : 'Default'}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <div className="flex flex-col gap-4 mt-auto">
+        <button 
+          onClick={handleSave}
+          disabled={saved}
+          className={`w-full py-4 rounded-[24px] font-bold text-xl transition-all shadow-xl active:scale-95 ${
+            saved ? 'bg-success text-white' : 'bg-brand-accent text-white'
+          }`}
+        >
+          {saved ? (
+             <div className="flex items-center justify-center gap-2">
+                <ShieldCheck className="w-6 h-6" />
+                <UrduText className="!text-white text-center">{t('saved')}</UrduText>
+             </div>
+          ) : (
+            <UrduText className="text-center w-full">{t('save')}</UrduText>
+          )}
+        </button>
+
+        <div className="text-center py-4 flex flex-col gap-1">
+          <p className="text-[10px] font-mono text-brand-background/30 uppercase tracking-[0.3em]">FasalDoc v1.0.0</p>
+          <p className="text-[9px] text-brand-background/20">Designed for Pakistani Farmers</p>
+        </div>
+      </div>
+    </div>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8F9FA',
-  },
-  header: {
-    padding: 20,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEE',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1B4332',
-    textAlign: 'left',
-  },
-  scrollContent: {
-    padding: 20,
-  },
-  section: {
-    marginBottom: 30,
-  },
-  sectionLabel: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: 'bold',
-    marginBottom: 10,
-    textAlign: 'left',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    paddingHorizontal: 15,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#DDD',
-    height: 55,
-    gap: 10,
-  },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    color: '#333',
-  },
-  saveButton: {
-    backgroundColor: '#1B4332',
-    height: 50,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 15,
-  },
-  saveButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  settingItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: 'white',
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#EEE',
-  },
-  settingLabelContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  settingText: {
-    fontSize: 16,
-    color: '#333',
-    fontWeight: '500',
-  },
-  settingValue: {
-    fontSize: 14,
-    color: '#888',
-  },
-  footer: {
-    marginTop: 20,
-    alignItems: 'center',
-    paddingBottom: 40,
-  },
-  footerText: {
-    fontSize: 12,
-    color: '#AAA',
-    textAlign: 'center',
-  },
-});
 
 export default SettingsScreen;

@@ -1,34 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  StyleSheet, 
-  TouchableOpacity, 
-  ScrollView, 
-  ActivityIndicator, 
-  RefreshControl,
-  SafeAreaView
-} from 'react-native';
-import { Bell, MapPin, RefreshCcw, ShieldAlert, CheckCircle2 } from 'lucide-react-native';
+import { Bell, MapPin, RefreshCcw, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { motion } from 'motion/react';
 import { UrduText } from '../components/UrduText';
 import { AlertCard } from '../components/AlertCard';
-import { Alert as AlertType } from '../data/mockAlerts';
+import { Alert } from '../data/mockAlerts';
 import { getAlertsForDistrict, getAlertHistory } from '../services/alertService';
 import { getUserDistrict, UserLocation } from '../services/locationService';
 import { runBackgroundAlertCheck } from '../services/backgroundTaskService';
-import { getLanguage } from '../utils/storage';
+import { useLanguage } from '../contexts/LanguageContext';
+import { cn } from '../lib/utils';
 
-const AlertsScreen = () => {
-  const [alerts, setAlerts] = useState<AlertType[]>([]);
+const AlertsScreen: React.FC = () => {
+  const { t, language } = useLanguage();
+  const [alerts, setAlerts] = useState<Alert[]>([]);
   const [location, setLocation] = useState<UserLocation | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeFilter, setActiveFilter] = useState('all');
-  const [lang, setLang] = useState<'en' | 'ur'>('ur');
+
+  const [filteredAlerts, setFilteredAlerts] = useState<Alert[]>([]);
+  const [activeFilter, setActiveFilter] = useState<string>('all');
 
   const filters = [
     { id: 'all', ur: 'سب', en: 'All' },
     { id: 'pest', ur: 'کیڑے', en: 'Pests' },
     { id: 'disease', ur: 'بیماری', en: 'Diseases' },
+    { id: 'climate_migration', ur: 'ہجرت', en: 'Migration' },
     { id: 'weather', ur: 'موسم', en: 'Weather' },
   ];
 
@@ -54,12 +50,11 @@ const AlertsScreen = () => {
         }
       });
 
-      const severityMap: any = { Severe: 0, High: 1, Medium: 2, Low: 3 };
+      const severityMap = { Severe: 0, High: 1, Medium: 2, Low: 3 };
       combined.sort((a, b) => severityMap[a.severity] - severityMap[b.severity]);
       
       setAlerts(combined);
-      const savedLang = await getLanguage();
-      setLang(savedLang);
+      applyFilter(combined, activeFilter);
     } catch (error) {
       console.error("Failed to load alerts:", error);
     } finally {
@@ -68,194 +63,127 @@ const AlertsScreen = () => {
     }
   };
 
+  const applyFilter = (data: Alert[], filterId: string) => {
+    if (filterId === 'all') {
+      setFilteredAlerts(data);
+    } else if (filterId === 'disease') {
+      // Small logic tweak to include both 'disease' and sometimes 'pest' if relevant
+      setFilteredAlerts(data.filter(a => a.type === 'disease'));
+    } else {
+      setFilteredAlerts(data.filter(a => a.type === filterId));
+    }
+  };
+
+  useEffect(() => {
+    applyFilter(alerts, activeFilter);
+  }, [activeFilter, alerts]);
+
   useEffect(() => {
     loadData();
   }, []);
 
-  const isUrdu = lang === 'ur';
-
-  const filteredAlerts = activeFilter === 'all' 
-    ? alerts 
-    : alerts.filter(a => a.type === activeFilter);
+  const isUrdu = language === 'ur';
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <View>
-          <UrduText style={styles.headerTitle}>
+    <div className="p-6 pb-24 min-h-screen">
+      {/* Header */}
+      <header className="flex items-center justify-between mb-6">
+        <div>
+          <UrduText className="text-3xl font-bold text-brand-primary m-0">
             {isUrdu ? 'فصل الرٹ' : 'Crop Alerts'}
           </UrduText>
           {location && (
-            <View style={styles.locationBadge}>
-              <MapPin size={12} color="#1B4332" />
-              <UrduText style={styles.locationText}>{location.district}</UrduText>
-            </View>
-          )}
-        </View>
-        <TouchableOpacity style={styles.refreshBtn} onPress={() => loadData(true)}>
-          <RefreshCcw size={24} color="#1B4332" />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.filterBar}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {filters.map((f) => (
-            <TouchableOpacity 
-              key={f.id} 
-              onPress={() => setActiveFilter(f.id)}
-              style={[styles.filterChip, activeFilter === f.id && styles.activeChip]}
-            >
-              <UrduText style={[styles.filterText, activeFilter === f.id && styles.activeFilterText]}>
-                {isUrdu ? f.ur : f.en}
+            <div className="flex items-center gap-1 mt-1 px-3 py-1 bg-brand-primary/10 rounded-full w-fit">
+              <MapPin className="w-3 h-3 text-brand-primary" />
+              <UrduText className="text-[10px] font-bold text-brand-primary leading-tight">
+                {location.district}
               </UrduText>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
+            </div>
+          )}
+        </div>
+        <button 
+          onClick={() => loadData(true)}
+          disabled={refreshing}
+          className={cn(
+            "p-3 bg-white rounded-2xl shadow-sm text-brand-primary active:scale-95 transition-all",
+            refreshing && "animate-spin"
+          )}
+        >
+          <RefreshCcw className="w-6 h-6" />
+        </button>
+      </header>
 
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadData(true)} />}
-      >
-        {loading ? (
-          <ActivityIndicator size="large" color="#1B4332" style={styles.loader} />
-        ) : filteredAlerts.length > 0 ? (
-          filteredAlerts.map(alert => <AlertCard key={alert.id} alert={alert} />)
-        ) : (
-          <View style={styles.emptyState}>
-            <CheckCircle2 color="#52B788" size={60} />
-            <UrduText style={styles.emptyTitle}>{isUrdu ? 'کوئی الرٹ نہیں' : 'No Alerts'}</UrduText>
-            <UrduText style={styles.emptyDesc}>
-              {isUrdu ? 'آپ کا علاقہ فی الحال محفوظ ہے۔' : 'Your area is currently safe.'}
+      {/* Filter Chips */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-2 no-scrollbar">
+        {filters.map((filter) => (
+          <button
+            key={filter.id}
+            onClick={() => setActiveFilter(filter.id)}
+            className={cn(
+              "px-4 py-2 rounded-xl whitespace-nowrap text-xs font-bold transition-all active:scale-95",
+              activeFilter === filter.id 
+                ? "bg-brand-primary text-white shadow-md" 
+                : "bg-white text-brand-primary border border-brand-primary/10"
+            )}
+          >
+            <UrduText className="m-0 !text-inherit">
+              {isUrdu ? filter.ur : filter.en}
             </UrduText>
-          </View>
-        )}
+          </button>
+        ))}
+      </div>
 
-        <View style={styles.infoCard}>
-           <ShieldAlert color="white" size={40} style={styles.infoIcon} />
-           <UrduText style={styles.infoTitle}>
-             {isUrdu ? 'کسان الرٹ سسٹم' : 'Farmer Alert System'}
-           </UrduText>
-           <UrduText style={styles.infoDesc}>
-             {isUrdu 
-               ? 'یہ سسٹم خودکار طریقے سے آپ کے علاقے میں خطرات کی نشاندہی کرتا ہے۔' 
-               : 'This system automatically identifies risks in your area.'}
-           </UrduText>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-20 opacity-50">
+          <div className="w-12 h-12 border-4 border-brand-primary border-t-transparent rounded-full animate-spin mb-4" />
+          <UrduText>لوڈنگ ہو رہی ہے...</UrduText>
+        </div>
+      ) : filteredAlerts.length > 0 ? (
+        <div className="space-y-4">
+          {filteredAlerts.map((alert) => (
+            <AlertCard key={alert.id} alert={alert} />
+          ))}
+        </div>
+      ) : (
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col items-center justify-center py-20 text-center"
+        >
+          <div className="w-24 h-24 bg-success/10 rounded-full flex items-center justify-center mb-6">
+            <CheckCircle2 className="w-12 h-12 text-success" />
+          </div>
+          <UrduText className="text-2xl font-bold text-gray-800 mb-2">
+            {isUrdu ? 'کوئی الرٹ نہیں' : 'No Alerts'}
+          </UrduText>
+          <UrduText className="text-gray-500 max-w-[200px]">
+            {isUrdu 
+              ? (activeFilter === 'all' 
+                  ? 'آپ کے علاقے میں فی الحال کوئی بیماری یا کیڑوں کا خطرہ نہیں ہے۔' 
+                  : `آپ کے علاقے میں فی الحال کوئی ${filters.find(f => f.id === activeFilter)?.ur} الرٹ نہیں ہے۔`)
+              : (activeFilter === 'all'
+                  ? 'Your area is currently safe from major pests and diseases.'
+                  : `No ${filters.find(f => f.id === activeFilter)?.en} alerts in your area.`)}
+          </UrduText>
+        </motion.div>
+      )}
+
+      {/* Info Card */}
+      <section className="premium-card bg-brand-primary p-6 mt-8 overflow-hidden relative">
+        <div className="absolute top-0 right-0 p-4 opacity-10">
+          <ShieldAlert className="w-20 h-20 text-white" />
+        </div>
+        <UrduText className="text-white text-lg font-bold mb-2">
+          {isUrdu ? 'کسان الرٹ سسٹم' : 'Farmer Alert System'}
+        </UrduText>
+        <UrduText className="text-white/80 text-sm leading-relaxed">
+          {isUrdu 
+            ? 'یہ سسٹم خودکار طریقے سے آپ کے علاقے میں کیڑوں اور بیماریوں کی نشاندہی کرتا ہے۔ الرٹ ملنے پر فوری کارروائی کریں۔'
+            : 'This system automatically detects pests and diseases in your area. Please take immediate action when alerted.'}
+        </UrduText>
+      </section>
+    </div>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8F9FA',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: 'white',
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1B4332',
-    textAlign: 'left',
-  },
-  locationBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E9F5EF',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 15,
-    marginTop: 5,
-    gap: 5,
-  },
-  locationText: {
-    fontSize: 10,
-    color: '#1B4332',
-    fontWeight: 'bold',
-  },
-  refreshBtn: {
-    padding: 10,
-  },
-  filterBar: {
-    backgroundColor: 'white',
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEE',
-  },
-  filterChip: {
-    paddingHorizontal: 18,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#F0F0F0',
-    marginHorizontal: 5,
-  },
-  activeChip: {
-    backgroundColor: '#1B4332',
-  },
-  filterText: {
-    fontSize: 13,
-    color: '#666',
-    fontWeight: 'bold',
-  },
-  activeFilterText: {
-    color: 'white',
-  },
-  scrollContent: {
-    padding: 15,
-  },
-  loader: {
-    marginTop: 50,
-  },
-  emptyState: {
-    alignItems: 'center',
-    padding: 60,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginTop: 15,
-  },
-  emptyDesc: {
-    fontSize: 14,
-    color: '#888',
-    marginTop: 5,
-  },
-  infoCard: {
-    backgroundColor: '#1B4332',
-    padding: 25,
-    borderRadius: 20,
-    marginTop: 20,
-    marginBottom: 40,
-    overflow: 'hidden',
-  },
-  infoIcon: {
-    position: 'absolute',
-    right: -10,
-    top: -10,
-    opacity: 0.15,
-  },
-  infoTitle: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 8,
-    textAlign: 'left',
-  },
-  infoDesc: {
-    color: '#B7E4C7',
-    fontSize: 13,
-    lineHeight: 20,
-    textAlign: 'left',
-  },
-});
 
 export default AlertsScreen;
