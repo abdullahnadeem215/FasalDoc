@@ -1,0 +1,64 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Inter:wght@100..900&family=Noto+Nastaliq+Urdu:wght@400..700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Playfair Display", serif;
+  --font-sans: "Inter", sans-serif;
+  --font-urdu: "Noto Nastaliq Urdu", serif;
+
+  --color-brand-background: #0D1F13;
+  --color-brand-primary: #1B4332;
+  --color-brand-accent: #2DC653;
+  --color-brand-cream: #FAF5EE;
+  --color-text-primary: #0D1F13;
+  
+  --color-success: #2DC653;
+  --color-warning: #2DC653;
+  --color-danger: #E63946;
+}
+
+@layer base {
+  :root {
+    --brand-background: #0D1F13;
+    --brand-primary: #1B4332;
+    --brand-accent: #2DC653;
+    --brand-cream: #FAF5EE;
+    --text-primary: #0D1F13;
+    --bg-card: #ffffff;
+    --border-card: #f3f4f6;
+  }
+
+  body {
+    @apply bg-brand-cream text-text-primary font-sans transition-colors duration-300;
+  }
+  
+  h1, h2, h3, h4 {
+    @apply font-display text-text-primary;
+  }
+  
+  [dir="rtl"] {
+    @apply font-urdu;
+  }
+}
+
+.urdu-text {
+  font-family: "Noto Nastaliq Urdu", serif;
+  line-height: 1.8;
+  writing-direction: rtl;
+  text-align: right;
+}
+
+/* Premium card styles */
+.premium-card {
+  background-color: var(--bg-card);
+  border-color: var(--border-card);
+  @apply border rounded-3xl shadow-sm overflow-hidden transition-colors duration-300;
+}
+
+.gold-button {
+  @apply bg-brand-accent text-white px-6 py-4 rounded-2xl font-bold transition-all hover:brightness-110 active:scale-95 shadow-lg shadow-emerald-900/10;
+}
+
+.green-button {
+  @apply bg-brand-primary text-white px-6 py-4 rounded-2xl font-bold transition-all hover:brightness-110 active:scale-95 shadow-lg shadow-emerald-900/10;
+}
