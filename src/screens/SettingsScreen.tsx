@@ -111,7 +111,7 @@ const SettingsScreen: React.FC = () => {
         </button>
 
         <div className="text-center py-4 flex flex-col gap-1">
-          <p className="text-[10px] font-mono text-brand-background/30 uppercase tracking-[0.3em]">FasalDoc v1.0.0</p>
+          <p className="text-[10px] font-mono text-brand-background/30 uppercase tracking-[0.3em]">KisaanAI v1.0.0</p>
           <p className="text-[9px] text-brand-background/20">Designed for Pakistani Farmers</p>
         </div>
       </div>

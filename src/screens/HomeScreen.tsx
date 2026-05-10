@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Camera, Image as ImageIcon, Wheat } from 'lucide-react';
 import { UrduText } from '../components/UrduText';
 import { LoadingOverlay } from '../components/LoadingOverlay';
+import { Logo } from '../components/Logo';
 import { analyzeCropDisease } from '../services/geminiService';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -50,9 +51,7 @@ const HomeScreen: React.FC = () => {
         
         <div className="z-10">
           <div className="flex items-center gap-4 mb-4">
-            <div className="w-16 h-16 bg-brand-accent rounded-2xl flex items-center justify-center text-3xl shadow-lg">
-              🌾
-            </div>
+            <Logo className="w-20 h-20" />
             <h1 className="text-4xl font-black tracking-tight text-white">{t('appTitle')}</h1>
           </div>
           <UrduText className="text-2xl font-semibold opacity-90 !text-white">{t('appSubtitle')}</UrduText>

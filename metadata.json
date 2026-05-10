@@ -1,5 +1,5 @@
 {
-  "name": "FasalDoc",
+  "name": "KisaanAI",
   "description": "AI-powered crop disease detector specializing in Pakistani agriculture. Identify diseases in wheat, cotton, rice, and more using Gemini vision.",
   "requestFramePermissions": [
     "camera"

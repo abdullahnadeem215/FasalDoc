@@ -48,7 +48,7 @@ export async function reverseGeocode(lat: number, lng: number): Promise<{distric
         format: 'json'
       },
       headers: {
-        'User-Agent': 'FasalDoc/1.0'
+        'User-Agent': 'KisaanAI/1.0'
       }
     });
 
